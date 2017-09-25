@@ -1,6 +1,8 @@
 OpenID Connect example
 ======================
 
+OpenID Connect Authorization Code Flow example
+
 **IMPORTANT: THIS IS AN EXAMPLE. DO NOT USE IN PRODUCTION**
 
 * terminal 1: `$ go run openidprovider/main.go`

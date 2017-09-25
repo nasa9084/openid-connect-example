@@ -63,12 +63,12 @@ func authzHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func callbackHandler(w http.ResponseWriter, r *http.Request) {
-	form := url.Values{}
-	form.Add(`grant_type`, `authorization_code`)
 	code := r.FormValue(`code`)
 	if code == "" {
 		w.Write([]byte(fmt.Sprintf(`<html><body>Error: %s</body></html>`, r.FormValue(`error`))))
 	}
+	form := url.Values{}
+	form.Add(`grant_type`, `authorization_code`)
 	form.Add(`code`, code)
 	form.Add(`redirect_uri`, `http://localhost:8000/callback`)
 	buf := bytes.Buffer{}

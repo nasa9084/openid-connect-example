@@ -114,6 +114,7 @@ func authzYesHandler(w http.ResponseWriter, r *http.Request) {
 func authzNoHandler(w http.ResponseWriter, r *http.Request) {
 	query := url.Values{}
 	query.Add(`error`, `access_denied`)
+	w.Header().Set(`Content-Type`, `application/x-www-form-urlencoded`)
 	w.Header().Set(`Location`, r.FormValue(`redirect_uri`)+`?`+query.Encode())
 	w.WriteHeader(http.StatusFound)
 }

@@ -66,6 +66,7 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue(`code`)
 	if code == "" {
 		w.Write([]byte(fmt.Sprintf(`<html><body>Error: %s</body></html>`, r.FormValue(`error`))))
+		return
 	}
 	form := url.Values{}
 	form.Add(`grant_type`, `authorization_code`)

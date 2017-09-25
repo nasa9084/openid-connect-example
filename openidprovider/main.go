@@ -29,6 +29,8 @@ AuthZ?<br />
 <a href="/authorize/no?%s">NO</a>
 </body>
 </html>`
+	// OpenID Connect 3.1.3.3
+	// Successful Token Response
 	tokenJSON = `{
   "access_token": "somethingToken",
   "token_type": "Bearer",
@@ -38,6 +40,7 @@ AuthZ?<br />
 
 func main() { os.Exit(exec()) }
 
+// main logic
 func exec() int {
 	// binding routes
 	http.Handle(`/authorize`, logMiddleware(authzHandler))
@@ -54,6 +57,7 @@ func exec() int {
 	return 0
 }
 
+// HTTP handling middleware for logging
 func logMiddleware(h http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf(`REQUEST: %s`, r.URL)
@@ -61,9 +65,12 @@ func logMiddleware(h http.HandlerFunc) http.Handler {
 	})
 }
 
+// Authorization endpoint
 func authzHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case `GET`:
+	case `GET`: // GET method means the request is redirected from Client
+		// OpenID Connect 3.1.2.2
+		// Request Validation
 		valid := true
 		if !isOpenIDConnect(r.FormValue(`scope`)) {
 			valid = false
@@ -85,26 +92,35 @@ func authzHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// OpenID Connect 3.1.2.3
+		// when the request is valid, redirect to authenticate endpoint
+		// in this example, skip checking prompt parameter, but must check it in production
+		// you can check user session before redirect
 		w.Header().Set(`Location`, `/authenticate?`+r.Form.Encode())
 		w.WriteHeader(http.StatusFound)
-	case `POST`:
+	case `POST`: // POST method means the request is authN request
 		if !authenticate(r.FormValue(`id`), r.FormValue(`passwd`)) {
-			// if the user authn is failed
+			// if the user authn is failed, re-redirect to authN endpoint
 			w.Header().Set(`Location`, `authenticate?`+r.URL.Query().Encode())
 			w.WriteHeader(http.StatusFound)
 		}
-		// if the user authn is succeeded
+		// OpenID Connect 3.1.2.4
+		// authorize if the user authn is succeeded
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(fmt.Sprintf(authzHTML, r.URL.Query().Encode(), r.URL.Query().Encode())))
 	}
 }
 
+// Authentication Handler
+// shows auth form
 func authnHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf(authnHTML, r.URL.Query().Encode())))
 }
 
 func authzYesHandler(w http.ResponseWriter, r *http.Request) {
+	// OpenID Connect 3.1.2.5
+	// Successful Authentication Response
 	query := url.Values{}
 	query.Add(`code`, `authorizedyes`)
 	w.Header().Set(`Content-Type`, `application/x-www-form-urlencoded`)
@@ -113,27 +129,40 @@ func authzYesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func authzNoHandler(w http.ResponseWriter, r *http.Request) {
+	// OpenID Connect 3.1.2.6
+	// Authentication Error Response
 	query := url.Values{}
-	query.Add(`error`, `access_denied`)
+	query.Add(`error`, `access_denied`) // OAuth 2.0 4.1.2.1 Error Response Error Code
 	w.Header().Set(`Content-Type`, `application/x-www-form-urlencoded`)
 	w.Header().Set(`Location`, r.FormValue(`redirect_uri`)+`?`+query.Encode())
 	w.WriteHeader(http.StatusFound)
 }
 
-// if production, you must use TLS to access to this endpoint
+// Access Token Endpoint
+// OpenID Connect 3.1.3
+// if production, you must use TLS, validates authorization code and should authenticates the client
 func tokenHandler(w http.ResponseWriter, r *http.Request) {
+	// OpenID Connect 3.1.3.3, 3.1.3.4
 	w.Header().Set(`Content-Type`, `application/json`)
 	w.Header().Set(`Cache-Control`, `no-store`)
 	w.Header().Set(`Pragma`, `no-cache`)
 	code := r.FormValue(`code`)
 	if code != "authorizedyes" {
-		w.WriteHeader(http.StatusBadRequest)
+		// if the code is invalid, response Error
+		// OpenID Connect 3.1.3.4
+		w.WriteHeader(http.StatusBadRequest) // HTTP Response Code is 400
+		// OAuth 2.0 5.2
+		// REQUIRED Error Code
 		w.Write([]byte(`{"error": "invalid_request"}`))
 		return
 	}
+	// OpenID Connect 3.1.3.3
 	w.Write([]byte(tokenJSON))
 }
 
+// scope parameter is string or list of string
+// the request is OpenID Connect Request if the scope parameter is
+// just "openid" string or contains "openid" in list
 func isOpenIDConnect(scope string) bool {
 	if scope == "" {
 		return false
@@ -153,6 +182,7 @@ func isOpenIDConnect(scope string) bool {
 	return false
 }
 
+// dummy authentication
 func authenticate(userid, password string) bool {
 	return userid == `userid` && password == `passwd`
 }
